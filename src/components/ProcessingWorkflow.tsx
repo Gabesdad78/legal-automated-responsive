@@ -6,6 +6,7 @@ import { CheckCircle, Clock, AlertCircle, FileText, Brain, Download } from 'luci
 import LegalAnalysis from './LegalAnalysis';
 import DocumentGenerator from './DocumentGenerator';
 import StateRulesEngine from './StateRulesEngine';
+import { analyzeDocument, generateAnalysisReport, AnalysisResult } from '@/lib/aiAnalysis';
 
 interface ProcessingWorkflowProps {
   uploadedFile: File | null;
@@ -20,7 +21,7 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [analysisData, setAnalysisData] = useState(null);
+  const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [analysisResponse, setAnalysisResponse] = useState('');
 
@@ -32,67 +33,34 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
   ];
 
   const startProcessing = async () => {
+    if (!uploadedFile) return;
+    
     setIsProcessing(true);
     setCurrentStep(1);
     
-    // Simulate AI analysis with progress
+    // Simulate progress during analysis
     for (let i = 0; i <= 100; i += 10) {
       setProgress(i);
       await new Promise(resolve => setTimeout(resolve, 200));
     }
     
-    // Generate detailed analysis response
-    const response = `LEGAL DOCUMENT ANALYSIS REPORT
-
-Jurisdiction: ${selectedState}, ${selectedCounty} County
-Document Type: Civil Complaint
-Case Type: Debt Collection
-
-KEY FINDINGS:
-1. Plaintiff: ABC Collection Agency LLC
-2. Defendant: John Doe
-3. Amount Claimed: $5,247.83
-4. Original Creditor: XYZ Credit Card Company
-5. Service Date: ${new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toLocaleDateString()}
-
-LEGAL ISSUES IDENTIFIED:
-- Statute of Limitations: Verify 4-year limit for written contracts
-- Standing to Sue: Request proof of ownership of debt
-- FDCPA Compliance: Check for proper debt validation notices
-- Account Stated: Challenge lack of detailed accounting
-
-RECOMMENDED DEFENSES:
-1. Lack of Standing - Demand proof plaintiff owns the debt
-2. Statute of Limitations - Calculate from last payment date
-3. Failure to State a Claim - Challenge vague allegations
-4. FDCPA Violations - Review collection practices
-
-NEXT STEPS:
-- File Answer within ${selectedState === 'California' ? '30' : '20'} days
-- Assert all affirmative defenses
-- Consider counterclaims for FDCPA violations
-- Request debt validation documentation`;
-    
-    setAnalysisResponse(response);
-    
-    // Mock analysis results
-    setAnalysisData({
-      court: `${selectedState === 'California' ? 'Superior' : selectedState === 'Texas' ? 'District' : 'Supreme'} Court of ${selectedState}, ${selectedCounty} County`,
-      jurisdiction: `${selectedState}, ${selectedCounty}`,
-      plaintiff: 'ABC Collection Agency LLC',
-      defendant: 'John Doe',
-      caseNumber: '2024CV' + Math.floor(Math.random() * 10000),
-      caseType: 'debt-collection',
-      filingDeadline: `${selectedState === 'California' ? '30' : '20'} days from service`,
-      legalIssues: ['FDCPA Violations', 'Statute of Limitations', 'Lack of Standing', 'Account Stated'],
-      serviceMethod: 'Personal Service',
-      urgencyLevel: 'high' as const
-    });
-    
-    setCurrentStep(2);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setCurrentStep(3);
-    setIsProcessing(false);
+    try {
+      // Perform actual AI analysis
+      const analysis = await analyzeDocument(uploadedFile, selectedState, selectedCounty);
+      setAnalysisData(analysis);
+      
+      // Generate detailed report
+      const report = generateAnalysisReport(analysis, selectedState, selectedCounty);
+      setAnalysisResponse(report);
+      
+      setCurrentStep(2);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setCurrentStep(3);
+    } catch (error) {
+      console.error('Analysis failed:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   useEffect(() => {
@@ -149,7 +117,6 @@ NEXT STEPS:
         </CardContent>
       </Card>
 
-      {/* Analysis Response Display */}
       {analysisResponse && currentStep >= 2 && (
         <Card>
           <CardHeader>
@@ -167,24 +134,36 @@ NEXT STEPS:
       )}
 
       {analysisData && currentStep >= 2 && (
-        <LegalAnalysis analysisData={analysisData} />
+        <LegalAnalysis analysisData={{
+          court: `${selectedState === 'California' ? 'Superior' : selectedState === 'Texas' ? 'District' : 'Supreme'} Court of ${selectedState}, ${selectedCounty} County`,
+          jurisdiction: `${selectedState}, ${selectedCounty}`,
+          plaintiff: analysisData.plaintiff,
+          defendant: analysisData.defendant,
+          caseNumber: '2024CV' + Math.floor(Math.random() * 10000),
+          caseType: analysisData.caseType,
+          filingDeadline: analysisData.filingDeadline,
+          legalIssues: analysisData.legalIssues,
+          serviceMethod: 'Personal Service',
+          urgencyLevel: analysisData.urgencyLevel
+        }} />
       )}
 
       {currentStep >= 2 && (
         <StateRulesEngine 
           state={selectedState} 
           county={selectedCounty} 
-          caseType="debt-collection" 
+          caseType={analysisData?.caseType || 'general-civil'} 
         />
       )}
 
-      {currentStep >= 3 && (
+      {currentStep >= 3 && analysisData && (
         <DocumentGenerator 
           caseData={{
             state: selectedState,
             county: selectedCounty,
-            caseType: 'debt-collection',
-            court: `${selectedState === 'California' ? 'Superior' : selectedState === 'Texas' ? 'District' : 'Supreme'} Court`
+            caseType: analysisData.caseType,
+            court: `${selectedState === 'California' ? 'Superior' : selectedState === 'Texas' ? 'District' : 'Supreme'} Court`,
+            analysisReport: analysisResponse
           }} 
         />
       )}
