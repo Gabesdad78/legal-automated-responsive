@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, FileText } from 'lucide-react';
-import { counties } from '@/data/counties';
+import { allUSStatesCounties } from '@/data/completeStates';
 import ProcessingWorkflow from './ProcessingWorkflow';
 
 const UploadSection: React.FC = () => {
@@ -12,8 +12,8 @@ const UploadSection: React.FC = () => {
   const [selectedCounty, setSelectedCounty] = useState('');
   const [showWorkflow, setShowWorkflow] = useState(false);
 
-  const states = Object.keys(counties);
-  const availableCounties = selectedState ? counties[selectedState] || [] : [];
+  const states = Object.keys(allUSStatesCounties).sort();
+  const availableCounties = selectedState ? allUSStatesCounties[selectedState] || [] : [];
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -101,7 +101,7 @@ const UploadSection: React.FC = () => {
             disabled={!selectedFile || !selectedState || !selectedCounty}
             className="w-full"
           >
-            Start Analysis
+            Start Your Defense Now
           </Button>
         </CardContent>
       </Card>

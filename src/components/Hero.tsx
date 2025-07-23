@@ -3,6 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Shield, Upload, FileText, Download } from 'lucide-react';
 
 const Hero: React.FC = () => {
+  const scrollToUpload = () => {
+    const uploadSection = document.getElementById('upload-section');
+    if (uploadSection) {
+      uploadSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-100 py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -15,7 +22,11 @@ const Hero: React.FC = () => {
             Upload your lawsuit and get professionally formatted legal responses 
             tailored to your state and county in minutes, not months.
           </p>
-          <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg">
+          <Button 
+            size="lg" 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg"
+            onClick={scrollToUpload}
+          >
             Start Your Defense Now
           </Button>
         </div>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import AppLayout from '@/components/AppLayout';
 import { AppProvider } from '@/contexts/AppContext';
@@ -6,7 +5,9 @@ import { AppProvider } from '@/contexts/AppContext';
 const Index: React.FC = () => {
   return (
     <AppProvider>
-      <AppLayout />
+      <div id="upload-section">
+        <AppLayout />
+      </div>
     </AppProvider>
   );
 };
