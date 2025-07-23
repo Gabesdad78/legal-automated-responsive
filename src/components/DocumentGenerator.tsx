@@ -37,26 +37,55 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ caseData }) => {
     }, 3000);
   };
 
-  const downloadDocument = (docName: string, format: string) => {
-    const content = `${docName}\n\nCase Type: ${caseData.caseType}\nJurisdiction: ${caseData.state}, ${caseData.county}\nCourt: ${caseData.court}\n\nGenerated on: ${new Date().toLocaleDateString()}\n\nThis is a ${docName} document template.\n\nDocument content would go here with proper legal formatting and structure.`;
+  const downloadDocument = (docName: string) => {
+    const docContent = generateDocumentContent(docName);
     
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([docContent], { 
+      type: 'text/plain;charset=utf-8' 
+    });
+    
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${docName.replace(/\s+/g, '_')}.txt`;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${docName.replace(/\s+/g, '_')}_${caseData.state}_${caseData.county}.txt`;
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    
     setTimeout(() => {
-      document.body.removeChild(a);
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
     }, 100);
     
     toast({
-      title: "Download Started",
-      description: `${docName} is downloading as TXT file.`,
+      title: "Download Complete",
+      description: `${docName} downloaded successfully as TXT file.`,
     });
+  };
+
+  const generateDocumentContent = (docName: string): string => {
+    const caseNumber = '2024CV' + Math.floor(Math.random() * 10000);
+    const currentDate = new Date().toLocaleDateString();
+    
+    const header = `${caseData.court} of ${caseData.state}\n${caseData.county} County\n\nCase No: ${caseNumber}\n\nABC Collection Agency LLC,\n    Plaintiff,\nv.\nJohn Doe,\n    Defendant.\n\n`;
+    
+    switch (docName) {
+      case 'Answer to Complaint':
+        return `${header}ANSWER TO COMPLAINT\n\nTO THE HONORABLE COURT:\n\nDefendant John Doe hereby answers the Complaint as follows:\n\n1. GENERAL DENIAL\nDefendant denies each and every allegation contained in the Complaint except as specifically admitted herein.\n\n2. AFFIRMATIVE DEFENSES\n\nFIRST AFFIRMATIVE DEFENSE - Statute of Limitations\nThe alleged cause of action is barred by the applicable statute of limitations.\n\nSECOND AFFIRMATIVE DEFENSE - Lack of Standing\nPlaintiff lacks standing to bring this action as it has failed to prove ownership of the alleged debt.\n\nTHIRD AFFIRMATIVE DEFENSE - Failure to State a Claim\nThe Complaint fails to state a claim upon which relief can be granted.\n\nFOURTH AFFIRMATIVE DEFENSE - FDCPA Violations\nPlaintiff has violated the Fair Debt Collection Practices Act.\n\nWHEREFORE, Defendant respectfully requests that this Court:\n1. Dismiss the Complaint with prejudice\n2. Award Defendant costs and attorney fees\n3. Grant such other relief as the Court deems just and proper\n\nRespectfully submitted,\n\n_________________________\nDefendant Pro Se\nDate: ${currentDate}`;
+        
+      case 'Motion to Dismiss':
+        return `${header}MOTION TO DISMISS\n\nTO THE HONORABLE COURT:\n\nDefendant moves this Court to dismiss the Complaint pursuant to ${caseData.state === 'California' ? 'Code of Civil Procedure Section 438' : 'applicable civil procedure rules'} on the following grounds:\n\n1. FAILURE TO STATE A CLAIM\nThe Complaint fails to state facts sufficient to constitute a cause of action.\n\n2. LACK OF STANDING\nPlaintiff has failed to establish standing to bring this action.\n\n3. STATUTE OF LIMITATIONS\nThe alleged cause of action is time-barred.\n\nSUPPORTING MEMORANDUM\n\nI. LEGAL STANDARD\nA motion to dismiss tests the legal sufficiency of the complaint.\n\nII. ARGUMENT\nA. Plaintiff Lacks Standing\nPlaintiff has not provided evidence of ownership of the alleged debt.\n\nB. Statute of Limitations\nThe alleged debt is beyond the ${caseData.state === 'California' ? '4-year' : '4-year'} statute of limitations.\n\nWHEREFORE, Defendant respectfully requests dismissal with prejudice.\n\nRespectfully submitted,\n\n_________________________\nDefendant Pro Se\nDate: ${currentDate}`;
+        
+      case 'Affirmative Defenses':
+        return `${header}AFFIRMATIVE DEFENSES\n\nDefendant asserts the following affirmative defenses:\n\n1. STATUTE OF LIMITATIONS\nThe alleged cause of action accrued more than four years prior to filing.\n\n2. LACK OF STANDING\nPlaintiff lacks standing as it cannot prove ownership of the debt.\n\n3. FAILURE TO STATE A CLAIM\nThe Complaint fails to state a claim upon which relief can be granted.\n\n4. FDCPA VIOLATIONS\nPlaintiff violated the Fair Debt Collection Practices Act.\n\n5. ACCOUNT STATED\nNo account stated exists between the parties.\n\n6. LACK OF CONSIDERATION\nThere was no consideration for the alleged agreement.\n\n7. PAYMENT\nThe alleged debt has been paid in full.\n\n8. ACCORD AND SATISFACTION\nAny obligation was discharged by accord and satisfaction.\n\nRespectfully submitted,\n\n_________________________\nDefendant Pro Se\nDate: ${currentDate}`;
+        
+      case 'Jury Demand Form':
+        return `${header}DEMAND FOR JURY TRIAL\n\nTO THE HONORABLE COURT:\n\nDefendant hereby demands a trial by jury on all issues triable by jury in this action.\n\nThis demand is made pursuant to ${caseData.state === 'California' ? 'Code of Civil Procedure Section 631' : 'applicable civil procedure rules'} and the Seventh Amendment to the United States Constitution.\n\nDefendant demands a jury of twelve persons for trial of this matter.\n\nRespectfully submitted,\n\n_________________________\nDefendant Pro Se\nDate: ${currentDate}`;
+        
+      default:
+        return `${header}${docName}\n\nGenerated on: ${currentDate}\n\nThis document has been generated for ${caseData.state}, ${caseData.county} County.`;
+    }
   };
 
   const documentTemplates = {
@@ -145,7 +174,7 @@ const DocumentGenerator: React.FC<DocumentGeneratorProps> = ({ caseData }) => {
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => downloadDocument(doc, 'TXT')}
+                        onClick={() => downloadDocument(doc)}
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Download TXT

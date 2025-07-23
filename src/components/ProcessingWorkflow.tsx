@@ -22,6 +22,7 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
   const [progress, setProgress] = useState(0);
   const [analysisData, setAnalysisData] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [analysisResponse, setAnalysisResponse] = useState('');
 
   const steps = [
     { id: 'upload', title: 'Document Upload', icon: FileText },
@@ -34,22 +35,56 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
     setIsProcessing(true);
     setCurrentStep(1);
     
-    // Simulate AI analysis
+    // Simulate AI analysis with progress
     for (let i = 0; i <= 100; i += 10) {
       setProgress(i);
       await new Promise(resolve => setTimeout(resolve, 200));
     }
     
+    // Generate detailed analysis response
+    const response = `LEGAL DOCUMENT ANALYSIS REPORT
+
+Jurisdiction: ${selectedState}, ${selectedCounty} County
+Document Type: Civil Complaint
+Case Type: Debt Collection
+
+KEY FINDINGS:
+1. Plaintiff: ABC Collection Agency LLC
+2. Defendant: John Doe
+3. Amount Claimed: $5,247.83
+4. Original Creditor: XYZ Credit Card Company
+5. Service Date: ${new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+
+LEGAL ISSUES IDENTIFIED:
+- Statute of Limitations: Verify 4-year limit for written contracts
+- Standing to Sue: Request proof of ownership of debt
+- FDCPA Compliance: Check for proper debt validation notices
+- Account Stated: Challenge lack of detailed accounting
+
+RECOMMENDED DEFENSES:
+1. Lack of Standing - Demand proof plaintiff owns the debt
+2. Statute of Limitations - Calculate from last payment date
+3. Failure to State a Claim - Challenge vague allegations
+4. FDCPA Violations - Review collection practices
+
+NEXT STEPS:
+- File Answer within ${selectedState === 'California' ? '30' : '20'} days
+- Assert all affirmative defenses
+- Consider counterclaims for FDCPA violations
+- Request debt validation documentation`;
+    
+    setAnalysisResponse(response);
+    
     // Mock analysis results
     setAnalysisData({
-      court: 'Superior Court of California, County of Los Angeles',
+      court: `${selectedState === 'California' ? 'Superior' : selectedState === 'Texas' ? 'District' : 'Supreme'} Court of ${selectedState}, ${selectedCounty} County`,
       jurisdiction: `${selectedState}, ${selectedCounty}`,
-      plaintiff: 'ABC Collection Agency',
+      plaintiff: 'ABC Collection Agency LLC',
       defendant: 'John Doe',
-      caseNumber: '23CV12345',
+      caseNumber: '2024CV' + Math.floor(Math.random() * 10000),
       caseType: 'debt-collection',
-      filingDeadline: '15 days remaining',
-      legalIssues: ['FDCPA', 'Statute of Limitations', 'Lack of Standing'],
+      filingDeadline: `${selectedState === 'California' ? '30' : '20'} days from service`,
+      legalIssues: ['FDCPA Violations', 'Statute of Limitations', 'Lack of Standing', 'Account Stated'],
       serviceMethod: 'Personal Service',
       urgencyLevel: 'high' as const
     });
@@ -68,7 +103,6 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Progress Steps */}
       <Card>
         <CardHeader>
           <CardTitle>Processing Status</CardTitle>
@@ -115,12 +149,27 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
         </CardContent>
       </Card>
 
-      {/* Analysis Results */}
+      {/* Analysis Response Display */}
+      {analysisResponse && currentStep >= 2 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5" />
+              AI Analysis Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <pre className="whitespace-pre-wrap text-sm font-mono">{analysisResponse}</pre>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {analysisData && currentStep >= 2 && (
         <LegalAnalysis analysisData={analysisData} />
       )}
 
-      {/* State Rules */}
       {currentStep >= 2 && (
         <StateRulesEngine 
           state={selectedState} 
@@ -129,14 +178,13 @@ const ProcessingWorkflow: React.FC<ProcessingWorkflowProps> = ({
         />
       )}
 
-      {/* Document Generator */}
       {currentStep >= 3 && (
         <DocumentGenerator 
           caseData={{
             state: selectedState,
             county: selectedCounty,
             caseType: 'debt-collection',
-            court: 'Superior Court'
+            court: `${selectedState === 'California' ? 'Superior' : selectedState === 'Texas' ? 'District' : 'Supreme'} Court`
           }} 
         />
       )}

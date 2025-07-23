@@ -24,10 +24,10 @@ const UploadSection: React.FC = () => {
   ];
 
   const counties = {
-    'California': ['Los Angeles', 'San Francisco', 'Orange', 'San Diego', 'Riverside'],
-    'Texas': ['Harris', 'Dallas', 'Tarrant', 'Bexar', 'Travis'],
-    'New York': ['New York', 'Kings', 'Queens', 'Suffolk', 'Bronx'],
-    'Florida': ['Miami-Dade', 'Broward', 'Palm Beach', 'Hillsborough', 'Orange']
+    'California': ['Alameda', 'Contra Costa', 'Fresno', 'Kern', 'Los Angeles', 'Orange', 'Riverside', 'Sacramento', 'San Bernardino', 'San Diego', 'San Francisco', 'Santa Clara', 'Ventura'],
+    'Texas': ['Bexar', 'Collin', 'Dallas', 'Denton', 'Fort Bend', 'Harris', 'Hidalgo', 'Montgomery', 'Tarrant', 'Travis', 'Williamson'],
+    'New York': ['Bronx', 'Erie', 'Kings', 'Monroe', 'Nassau', 'New York', 'Queens', 'Richmond', 'Suffolk', 'Westchester'],
+    'Florida': ['Broward', 'Duval', 'Hillsborough', 'Miami-Dade', 'Orange', 'Palm Beach', 'Pinellas', 'Polk']
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -64,10 +64,9 @@ const UploadSection: React.FC = () => {
     <div className="max-w-4xl mx-auto space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-center">Upload Your Lawsuit Documents</CardTitle>
+          <CardTitle className="text-center">Upload Your Documents</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* File Upload */}
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
               dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
@@ -104,7 +103,7 @@ const UploadSection: React.FC = () => {
                 <Upload className="h-12 w-12 text-gray-400 mx-auto" />
                 <div>
                   <p className="text-lg font-medium text-gray-700">
-                    Drop your lawsuit documents here
+                    Drop your documents here
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
                     Or click to browse (PDF, JPG, PNG)
@@ -117,7 +116,6 @@ const UploadSection: React.FC = () => {
             )}
           </div>
 
-          {/* State and County Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">State</label>
@@ -144,15 +142,17 @@ const UploadSection: React.FC = () => {
                   <SelectValue placeholder="Select your county" />
                 </SelectTrigger>
                 <SelectContent>
-                  {selectedState && counties[selectedState as keyof typeof counties]?.map(county => (
-                    <SelectItem key={county} value={county}>{county}</SelectItem>
-                  )) || <SelectItem value="other">Other</SelectItem>}
+                  {selectedState && counties[selectedState as keyof typeof counties] ? 
+                    counties[selectedState as keyof typeof counties].map(county => (
+                      <SelectItem key={county} value={county}>{county}</SelectItem>
+                    )) : 
+                    <SelectItem value="other">Other</SelectItem>
+                  }
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* Warning */}
           {!canProcess && (
             <div className="flex items-center gap-2 p-4 bg-yellow-50 rounded-lg">
               <AlertCircle className="h-5 w-5 text-yellow-600" />
@@ -164,7 +164,6 @@ const UploadSection: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Processing Workflow */}
       {canProcess && (
         <ProcessingWorkflow 
           uploadedFile={uploadedFile}
