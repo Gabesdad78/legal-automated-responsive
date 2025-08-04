@@ -1,20 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
-
-interface User {
-  id: string;
-  email: string;
-  role: 'admin' | 'user' | 'tester';
-  plan: 'free' | 'single' | 'premium' | 'unlimited';
-  status: 'active' | 'testing' | 'suspended';
-}
+import { auth, User } from '@/lib/supabase';
 
 interface AuthContextType {
   user: User | null;
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<boolean>;
+  signUp: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   checkAccess: (feature: string) => boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -25,64 +20,173 @@ export const useAuth = () => {
   return context;
 };
 
-// Mock users database
-const mockUsers: Record<string, User & { password: string }> = {
-  'admin@lawdefense.com': {
-    id: '1',
-    email: 'admin@lawdefense.com',
-    password: 'admin123',
-    role: 'admin',
-    plan: 'unlimited',
-    status: 'active'
-  },
-  'tester@example.com': {
-    id: '2',
-    email: 'tester@example.com',
-    password: 'test123',
-    role: 'tester',
-    plan: 'premium',
-    status: 'testing'
-  },
-  'user@example.com': {
-    id: '3',
-    email: 'user@example.com',
-    password: 'user123',
-    role: 'user',
-    plan: 'single',
-    status: 'active'
-  }
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for saved session
-    const savedUser = localStorage.getItem('lawdefense_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    // Check for existing session
+    const checkUser = async () => {
+      try {
+        const { user: currentUser } = await auth.getCurrentUser();
+        if (currentUser) {
+          // Get user profile from database
+          const { data: profile } = await auth.supabase
+            .from('users')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
+          
+          if (profile) {
+            setUser(profile);
+          }
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        try {
+          const { data: profile } = await auth.supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profile) {
+            setUser(profile);
+          } else {
+            // Create user profile if doesn't exist
+            const { data: newProfile } = await auth.supabase
+              .from('users')
+              .insert({
+                id: session.user.id,
+                email: session.user.email,
+                role: 'user',
+                plan: 'free',
+                status: 'active'
+              })
+              .select()
+              .single();
+            
+            if (newProfile) {
+              setUser(newProfile);
+            }
+          }
+        } catch (error) {
+          console.error('Profile fetch error:', error);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    const mockUser = mockUsers[email];
-    
-    if (mockUser && mockUser.password === password) {
-      const { password: _, ...userWithoutPassword } = mockUser;
-      setUser(userWithoutPassword);
-      localStorage.setItem('lawdefense_user', JSON.stringify(userWithoutPassword));
-      toast({ title: 'Login successful', description: `Welcome back, ${email}` });
-      return true;
+  const signUp = async (email: string, password: string): Promise<boolean> => {
+    try {
+      setLoading(true);
+      const { data, error } = await auth.signUp(email, password);
+      
+      if (error) {
+        toast({ 
+          title: 'Sign up failed', 
+          description: error.message, 
+          variant: 'destructive' 
+        });
+        return false;
+      }
+      
+      if (data.user) {
+        toast({ 
+          title: 'Sign up successful', 
+          description: 'Please check your email to verify your account' 
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Sign up error:', error);
+      toast({ 
+        title: 'Sign up failed', 
+        description: 'An unexpected error occurred', 
+        variant: 'destructive' 
+      });
+      return false;
+    } finally {
+      setLoading(false);
     }
-    
-    toast({ title: 'Login failed', description: 'Invalid email or password', variant: 'destructive' });
-    return false;
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('lawdefense_user');
-    toast({ title: 'Logged out', description: 'You have been logged out successfully' });
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      setLoading(true);
+      const { data, error } = await auth.signIn(email, password);
+      
+      if (error) {
+        toast({ 
+          title: 'Login failed', 
+          description: error.message, 
+          variant: 'destructive' 
+        });
+        return false;
+      }
+      
+      if (data.user) {
+        toast({ 
+          title: 'Login successful', 
+          description: `Welcome back, ${email}` 
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({ 
+        title: 'Login failed', 
+        description: 'An unexpected error occurred', 
+        variant: 'destructive' 
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const { error } = await auth.signOut();
+      if (error) {
+        toast({ 
+          title: 'Logout failed', 
+          description: error.message, 
+          variant: 'destructive' 
+        });
+      } else {
+        setUser(null);
+        toast({ 
+          title: 'Logged out', 
+          description: 'You have been logged out successfully' 
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({ 
+        title: 'Logout failed', 
+        description: 'An unexpected error occurred', 
+        variant: 'destructive' 
+      });
+    }
   };
 
   const checkAccess = (feature: string): boolean => {
@@ -116,8 +220,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       isAdmin,
       login,
+      signUp,
       logout,
-      checkAccess
+      checkAccess,
+      loading
     }}>
       {children}
     </AuthContext.Provider>
