@@ -12,7 +12,7 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
-    minify: 'terser',
+    minify: 'esbuild', // Use esbuild instead of terser for better performance
     rollupOptions: {
       output: {
         manualChunks: {
