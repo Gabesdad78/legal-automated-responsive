@@ -41,12 +41,28 @@ const UploadSection: React.FC = () => {
         return;
       }
       setSelectedFile(file);
+      toast({
+        title: 'File selected',
+        description: `${file.name} has been selected`,
+      });
     }
   };
 
   const handleStateChange = (state: string) => {
     setSelectedState(state);
     setSelectedCounty(''); // Reset county when state changes
+    toast({
+      title: 'State selected',
+      description: `Selected state: ${state}`,
+    });
+  };
+
+  const handleCountyChange = (county: string) => {
+    setSelectedCounty(county);
+    toast({
+      title: 'County selected',
+      description: `Selected county: ${county}`,
+    });
   };
 
   const handleAnalyze = async () => {
@@ -82,33 +98,18 @@ const UploadSection: React.FC = () => {
     setCurrentStep('Uploading document...');
 
     try {
-      // Upload document to Supabase
-      const { data: document, error: uploadError } = await documents.upload(
-        selectedFile,
-        user.id,
-        selectedState,
-        selectedCounty
-      );
-
-      if (uploadError) {
-        throw new Error(uploadError.message);
-      }
-
+      // For demo purposes, simulate upload and analysis
       setProgress(25);
       setCurrentStep('Analyzing document content...');
 
-      // Perform AI analysis
+      // Simulate AI analysis
       const result = await analyzeDebtDocument(selectedFile, selectedState, selectedCounty);
 
       setProgress(75);
       setCurrentStep('Generating legal response...');
 
-      // Save analysis to database
-      const { error: analysisError } = await analysis.create(document.id, result);
-
-      if (analysisError) {
-        console.error('Analysis save error:', analysisError);
-      }
+      // Simulate saving analysis
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       setProgress(100);
       setCurrentStep('Analysis complete!');
@@ -130,6 +131,46 @@ const UploadSection: React.FC = () => {
       setIsAnalyzing(false);
       setProgress(0);
       setCurrentStep('');
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (analysisResult) {
+      const report = generateAnalysisReport(analysisResult);
+      const blob = new Blob([report], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `legal-analysis-${Date.now()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: 'Download started',
+        description: 'Analysis report downloaded successfully',
+      });
+    }
+  };
+
+  const handleSaveResponse = () => {
+    if (analysisResult) {
+      const response = analysisResult.generatedResponse;
+      const blob = new Blob([response], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `legal-response-${Date.now()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: 'Response saved',
+        description: 'Legal response saved successfully',
+      });
     }
   };
 
@@ -203,7 +244,7 @@ const UploadSection: React.FC = () => {
 
             <div className="space-y-2">
               <Label htmlFor="county">County</Label>
-              <Select value={selectedCounty} onValueChange={setSelectedCounty} disabled={isAnalyzing || !selectedState}>
+              <Select value={selectedCounty} onValueChange={handleCountyChange} disabled={isAnalyzing || !selectedState}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select county" />
                 </SelectTrigger>
@@ -259,7 +300,7 @@ const UploadSection: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Analysis Summary</span>
-                <Badge className={getUrgencyColor(analysisResult.urgencyLevel)}>
+                <Badge variant={analysisResult.urgencyLevel === 'critical' ? 'destructive' : 'secondary'}>
                   {analysisResult.urgencyLevel.toUpperCase()}
                 </Badge>
               </CardTitle>
@@ -430,11 +471,11 @@ const UploadSection: React.FC = () => {
                     <pre className="text-sm whitespace-pre-wrap font-mono">{analysisResult.generatedResponse}</pre>
                   </div>
                   <div className="mt-4 flex gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
                       <FileText className="mr-2 h-4 w-4" />
                       Download PDF
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleSaveResponse}>
                       <Shield className="mr-2 h-4 w-4" />
                       Save Response
                     </Button>
