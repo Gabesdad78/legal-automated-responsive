@@ -194,7 +194,7 @@ const UploadSection: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div id="upload-section" className="max-w-6xl mx-auto px-4 py-8">
       <Card className="mb-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
